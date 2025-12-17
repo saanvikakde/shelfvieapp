@@ -15,35 +15,65 @@ struct ContentView: View {
     private let groceriesKey = "savedGroceries"
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(groceries.sorted(by: { $0.expirationDate < $1.expirationDate })) { item in
-                    VStack(alignment: .leading) {
-                        Text(item.name)
-                            .font(.headline)
+        TabView {
 
-                        Text("\(item.location.rawValue) • Expires \(item.expirationDate.formatted(date: .abbreviated, time: .omitted))")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
+            NavigationStack {
+                GroceryListView(
+                    title: "Fridge",
+                    groceries: groceries.filter { $0.location == .fridge }
+                )
+                .toolbar {
+                    addButton
                 }
             }
-            .navigationTitle("Shelfvie")
-            .toolbar {
-                Button {
-                    showingAddGrocery = true
-                } label: {
-                    Image(systemName: "plus")
+            .tabItem {
+                Label("Fridge", systemImage: "refrigerator")
+            }
+
+            NavigationStack {
+                GroceryListView(
+                    title: "Freezer",
+                    groceries: groceries.filter { $0.location == .freezer }
+                )
+                .toolbar {
+                    addButton
                 }
             }
-            .sheet(isPresented: $showingAddGrocery) {
-                AddGroceryView { newItem in
-                    groceries.append(newItem)
-                    saveGroceries()
+            .tabItem {
+                Label("Freezer", systemImage: "snowflake")
+            }
+
+            NavigationStack {
+                GroceryListView(
+                    title: "Pantry",
+                    groceries: groceries.filter { $0.location == .pantry }
+                )
+                .toolbar {
+                    addButton
                 }
             }
-            .onAppear {
-                loadGroceries()
+            .tabItem {
+                Label("Pantry", systemImage: "cabinet")
+            }
+        }
+        .sheet(isPresented: $showingAddGrocery) {
+            AddGroceryView { newItem in
+                groceries.append(newItem)
+                saveGroceries()
+            }
+        }
+        .onAppear {
+            loadGroceries()
+        }
+    }
+
+    // MARK: - Reusable Add Button
+    private var addButton: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showingAddGrocery = true
+            } label: {
+                Image(systemName: "plus")
             }
         }
     }
