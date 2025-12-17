@@ -8,17 +8,37 @@
 import SwiftUI
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
 
-#Preview {
-    ContentView()
+    @State private var groceries: [GroceryItem] = []
+    @State private var showingAddGrocery = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(groceries.sorted(by: { $0.expirationDate < $1.expirationDate })) { item in
+                    VStack(alignment: .leading) {
+                        Text(item.name)
+                            .font(.headline)
+
+                        Text("\(item.location.rawValue) • Expires \(item.expirationDate.formatted(date: .abbreviated, time: .omitted))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Shelfvie")
+            .toolbar {
+                Button {
+                    showingAddGrocery = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+            .sheet(isPresented: $showingAddGrocery) {
+                AddGroceryView { newItem in
+                    groceries.append(newItem)
+                }
+            }
+        }
+    }
 }
