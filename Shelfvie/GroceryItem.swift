@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum StorageLocation: String, CaseIterable, Identifiable {
+enum StorageLocation: String, CaseIterable, Identifiable, Codable {
     case fridge = "Fridge"
     case freezer = "Freezer"
     case pantry = "Pantry"
@@ -15,9 +15,21 @@ enum StorageLocation: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
-struct GroceryItem: Identifiable {
-    let id = UUID()
+struct GroceryItem: Identifiable, Codable {
+    let id: UUID
     var name: String
     var expirationDate: Date
     var location: StorageLocation
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        expirationDate: Date,
+        location: StorageLocation
+    ) {
+        self.id = id
+        self.name = name
+        self.expirationDate = expirationDate
+        self.location = location
+    }
 }
