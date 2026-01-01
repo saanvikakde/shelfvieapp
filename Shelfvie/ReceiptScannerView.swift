@@ -11,9 +11,9 @@ import UIKit
 
 struct ReceiptScannerView: View {
 
-    @State private var showingPicker = false
-    @State private var pickerSource: ImagePicker.Source = .camera
+    @State private var pickerSource: ImagePicker.Source? = nil
     @State private var scannedText: String = ""
+
 
     var body: some View {
         NavigationStack {
@@ -32,27 +32,28 @@ struct ReceiptScannerView: View {
                 HStack(spacing: 20) {
                     Button {
                         pickerSource = .camera
-                        showingPicker = true
                     } label: {
                         Label("Scan Receipt", systemImage: "camera")
                     }
 
                     Button {
                         pickerSource = .photoLibrary
-                        showingPicker = true
                     } label: {
                         Label("Upload Image", systemImage: "photo")
                     }
                 }
                 .font(.headline)
+
             }
             .padding()
             .navigationTitle("Receipt Scan")
-            .sheet(isPresented: $showingPicker) {
-                ImagePicker(source: pickerSource) { image in
+            .sheet(item: $pickerSource) { source in
+                ImagePicker(source: source) { image in
                     recognizeText(from: image)
+                    pickerSource = nil
                 }
             }
+
         }
     }
 

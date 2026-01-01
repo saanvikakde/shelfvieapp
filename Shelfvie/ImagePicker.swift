@@ -10,10 +10,18 @@ import UIKit
 
 struct ImagePicker: UIViewControllerRepresentable {
 
-    enum Source {
+    enum Source: Identifiable {
         case camera
         case photoLibrary
+
+        var id: String {
+            switch self {
+            case .camera: return "camera"
+            case .photoLibrary: return "photoLibrary"
+            }
+        }
     }
+
 
     let source: Source
     var onImagePicked: (UIImage) -> Void
