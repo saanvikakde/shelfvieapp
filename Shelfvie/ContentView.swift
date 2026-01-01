@@ -11,50 +11,16 @@ struct ContentView: View {
 
     @State private var groceries: [GroceryItem] = []
     @State private var showingAddGrocery = false
+    @State private var editingItem: GroceryItem? = nil
 
     private let groceriesKey = "savedGroceries"
 
     var body: some View {
         TabView {
 
-            NavigationStack {
-                GroceryListView(
-                    title: "Fridge",
-                    groceries: groceries.filter { $0.location == .fridge }
-                )
-                .toolbar {
-                    addButton
-                }
-            }
-            .tabItem {
-                Label("Fridge", systemImage: "refrigerator")
-            }
-
-            NavigationStack {
-                GroceryListView(
-                    title: "Freezer",
-                    groceries: groceries.filter { $0.location == .freezer }
-                )
-                .toolbar {
-                    addButton
-                }
-            }
-            .tabItem {
-                Label("Freezer", systemImage: "snowflake")
-            }
-
-            NavigationStack {
-                GroceryListView(
-                    title: "Pantry",
-                    groceries: groceries.filter { $0.location == .pantry }
-                )
-                .toolbar {
-                    addButton
-                }
-            }
-            .tabItem {
-                Label("Pantry", systemImage: "cabinet")
-            }
+            fridgeTab
+            freezerTab
+            pantryTab
         }
         .sheet(isPresented: $showingAddGrocery) {
             AddGroceryView { newItem in
@@ -62,12 +28,71 @@ struct ContentView: View {
                 saveGroceries()
             }
         }
+        .sheet(item: $editingItem) { item in
+            AddGroceryView(editingItem: item) { updatedItem in
+                if let index = groceries.firstIndex(where: { $0.id == updatedItem.id }) {
+                    groceries[index] = updatedItem
+                    saveGroceries()
+                }
+            }
+        }
         .onAppear {
             loadGroceries()
         }
     }
 
-    // MARK: - Reusable Add Button
+    // MARK: - Tabs
+
+    private var fridgeTab: some View {
+        NavigationStack {
+            GroceryListView(
+                title: "Fridge",
+                groceries: $groceries,
+                location: .fridge,
+                onDelete: saveGroceries,
+                onEdit: { editingItem = $0 }
+            )
+            .toolbar { addButton }
+        }
+        .tabItem {
+            Label("Fridge", systemImage: "refrigerator")
+        }
+    }
+
+    private var freezerTab: some View {
+        NavigationStack {
+            GroceryListView(
+                title: "Freezer",
+                groceries: $groceries,
+                location: .freezer,
+                onDelete: saveGroceries,
+                onEdit: { editingItem = $0 }
+            )
+            .toolbar { addButton }
+        }
+        .tabItem {
+            Label("Freezer", systemImage: "snowflake")
+        }
+    }
+
+    private var pantryTab: some View {
+        NavigationStack {
+            GroceryListView(
+                title: "Pantry",
+                groceries: $groceries,
+                location: .pantry,
+                onDelete: saveGroceries,
+                onEdit: { editingItem = $0 }
+            )
+            .toolbar { addButton }
+        }
+        .tabItem {
+            Label("Pantry", systemImage: "cabinet")
+        }
+    }
+
+    // MARK: - Add Button
+
     private var addButton: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
@@ -77,6 +102,8 @@ struct ContentView: View {
             }
         }
     }
+
+    // MARK: - Persistence
 
     private func saveGroceries() {
         if let data = try? JSONEncoder().encode(groceries) {

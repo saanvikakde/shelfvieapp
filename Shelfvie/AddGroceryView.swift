@@ -11,11 +11,21 @@ struct AddGroceryView: View {
 
     @Environment(\.dismiss) var dismiss
 
-    @State private var name: String = ""
-    @State private var expirationDate: Date = Date()
-    @State private var location: StorageLocation = .fridge
+    @State private var name: String
+    @State private var expirationDate: Date
+    @State private var location: StorageLocation
 
+    let editingItem: GroceryItem?
     var onSave: (GroceryItem) -> Void
+
+    init(editingItem: GroceryItem? = nil, onSave: @escaping (GroceryItem) -> Void) {
+        self.editingItem = editingItem
+        self.onSave = onSave
+
+        _name = State(initialValue: editingItem?.name ?? "")
+        _expirationDate = State(initialValue: editingItem?.expirationDate ?? Date())
+        _location = State(initialValue: editingItem?.location ?? .fridge)
+    }
 
     var body: some View {
         NavigationStack {
@@ -36,7 +46,7 @@ struct AddGroceryView: View {
                     )
                 }
             }
-            .navigationTitle("Add Item")
+            .navigationTitle(editingItem == nil ? "Add Item" : "Edit Item")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -46,12 +56,13 @@ struct AddGroceryView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let newItem = GroceryItem(
+                        let item = GroceryItem(
+                            id: editingItem?.id ?? UUID(),
                             name: name,
                             expirationDate: expirationDate,
                             location: location
                         )
-                        onSave(newItem)
+                        onSave(item)
                         dismiss()
                     }
                     .disabled(name.isEmpty)
@@ -60,4 +71,3 @@ struct AddGroceryView: View {
         }
     }
 }
-
