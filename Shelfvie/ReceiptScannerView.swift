@@ -12,23 +12,67 @@ import UIKit
 struct ReceiptScannerView: View {
 
     @State private var pickerSource: ImagePicker.Source? = nil
-    @State private var scannedText: String = ""
+    @State private var ocrLines: [OCRLine] = []
+    @State private var errorMessage: String? = nil
 
+    /// Callback to send confirmed items back to ContentView
+    var onItemsConfirmed: ([String]) -> Void
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
 
-                if scannedText.isEmpty {
-                    Text("Scan or upload a grocery receipt to extract text.")
+                // MARK: - Status / Errors
+                if let errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                }
+
+                // MARK: - OCR Results
+                if !ocrLines.isEmpty {
+                    List {
+                        ForEach($ocrLines) { $line in
+                            HStack {
+                                Text(line.text)
+
+                                Spacer()
+
+                                if line.isSelected {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.green)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                line.isSelected.toggle()
+                            }
+                        }
+                    }
+                } else if errorMessage == nil {
+                    Text("Scan or upload a receipt to detect grocery items.")
                         .foregroundColor(.secondary)
-                } else {
-                    ScrollView {
-                        Text(scannedText)
+                        .padding()
+                }
+
+                // MARK: - Add Selected Items Button
+                if ocrLines.contains(where: { $0.isSelected }) {
+                    Button {
+                        addSelectedItems()
+                    } label: {
+                        Text("Add Selected Items")
+                            .frame(maxWidth: .infinity)
                             .padding()
+                            .background(Color.accentColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
                     }
                 }
 
+                Spacer()
+
+                // MARK: - Actions
                 HStack(spacing: 20) {
                     Button {
                         pickerSource = .camera
@@ -43,7 +87,6 @@ struct ReceiptScannerView: View {
                     }
                 }
                 .font(.headline)
-
             }
             .padding()
             .navigationTitle("Receipt Scan")
@@ -53,22 +96,38 @@ struct ReceiptScannerView: View {
                     pickerSource = nil
                 }
             }
-
         }
     }
 
+    // MARK: - OCR Logic
     private func recognizeText(from image: UIImage) {
-        guard let cgImage = image.cgImage else { return }
+        errorMessage = nil
+        ocrLines = []
+
+        guard let cgImage = image.cgImage else {
+            errorMessage = "Could not process image."
+            return
+        }
 
         let request = VNRecognizeTextRequest { request, _ in
-            guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
+            guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                DispatchQueue.main.async {
+                    errorMessage = "No text detected."
+                }
+                return
+            }
 
-            let text = observations
+            let rawLines = observations
                 .compactMap { $0.topCandidates(1).first?.string }
-                .joined(separator: "\n")
+
+            let filtered = filterGroceryLikeLines(rawLines)
 
             DispatchQueue.main.async {
-                scannedText = text
+                if filtered.isEmpty {
+                    errorMessage = "No readable grocery items found. Try a clearer photo."
+                } else {
+                    ocrLines = filtered.map { OCRLine(text: $0) }
+                }
             }
         }
 
@@ -78,4 +137,42 @@ struct ReceiptScannerView: View {
         let handler = VNImageRequestHandler(cgImage: cgImage)
         try? handler.perform([request])
     }
+
+    // MARK: - Add Selected Items
+    private func addSelectedItems() {
+        let selectedItems = ocrLines
+            .filter { $0.isSelected }
+            .map { $0.text }
+
+        onItemsConfirmed(selectedItems)
+
+        // Reset state after adding
+        ocrLines = []
+        errorMessage = nil
+    }
+
+    // MARK: - Heuristic Filtering
+    private func filterGroceryLikeLines(_ lines: [String]) -> [String] {
+        lines.filter { line in
+            let lower = line.lowercased()
+
+            // Ignore prices, totals, payments, etc.
+            let ignoredKeywords = [
+                "total", "subtotal", "tax", "$",
+                "visa", "mastercard", "change", "balance"
+            ]
+            if ignoredKeywords.contains(where: lower.contains) {
+                return false
+            }
+
+            // Must contain letters
+            let hasLetters = lower.range(of: "[a-z]", options: .regularExpression) != nil
+
+            // Short-ish lines are more likely item names
+            let reasonableLength = line.count <= 30
+
+            return hasLetters && reasonableLength
+        }
+    }
 }
+

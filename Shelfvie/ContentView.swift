@@ -94,13 +94,24 @@ struct ContentView: View {
 
     private var ocrTab: some View {
         NavigationStack {
-            ReceiptScannerView()
+            ReceiptScannerView { scannedItems in
+                let newGroceries = scannedItems.map {
+                    GroceryItem(
+                        name: $0,
+                        expirationDate: Date(), // temporary
+                        location: .pantry       // default for now
+                    )
+                }
+
+                groceries.append(contentsOf: newGroceries)
+                saveGroceries()
+            }
         }
         .tabItem {
             Label("Scan", systemImage: "doc.text.viewfinder")
         }
-
     }
+
     // MARK: - Add Button
 
     private var addButton: some ToolbarContent {
