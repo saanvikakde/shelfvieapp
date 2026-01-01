@@ -21,6 +21,7 @@ struct ContentView: View {
             fridgeTab
             freezerTab
             pantryTab
+            ocrTab
         }
         .sheet(isPresented: $showingAddGrocery) {
             AddGroceryView { newItem in
@@ -91,6 +92,15 @@ struct ContentView: View {
         }
     }
 
+    private var ocrTab: some View {
+        NavigationStack {
+            ReceiptScannerView()
+        }
+        .tabItem {
+            Label("Scan", systemImage: "doc.text.viewfinder")
+        }
+
+    }
     // MARK: - Add Button
 
     private var addButton: some ToolbarContent {
